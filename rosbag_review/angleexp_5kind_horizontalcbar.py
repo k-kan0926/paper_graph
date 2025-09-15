@@ -44,8 +44,8 @@ def load_dataset(csv_path: pathlib.Path):
 
 def plot_5_pairs(csv_paths, labels, output_pdf_path, font_path=None):
     font_prop = fm.FontProperties(fname=font_path) if font_path else None
-    fig = plt.figure(figsize=(14, 22))
-    gs = gridspec.GridSpec(nrows=5, ncols=2, wspace=0.3, hspace=0.6)
+    fig = plt.figure(figsize=(20, 28))
+    gs = gridspec.GridSpec(nrows=5, ncols=2, wspace=0.1, hspace=0.25)
 
     global_vmin, global_vmax = float('inf'), float('-inf')
     data_list = []
@@ -61,9 +61,9 @@ def plot_5_pairs(csv_paths, labels, output_pdf_path, font_path=None):
         data_list.append(((x1, y1, z1_deg), (x2, y2, z2_deg)))
 
     norm = plt.Normalize(vmin=global_vmin, vmax=global_vmax)
-    labeltitel_fontsize = 14
-    label_fontsize = 8
-    title_fontsize = 16
+    labeltitel_fontsize = 18
+    label_fontsize = 14
+    title_fontsize = 18
 
     for idx, ((x1, y1, z1), (x2, y2, z2)) in enumerate(data_list):
         X1, Y1 = np.meshgrid(x1, y1)
@@ -72,35 +72,37 @@ def plot_5_pairs(csv_paths, labels, output_pdf_path, font_path=None):
         # (a) step_minus
         ax1 = fig.add_subplot(gs[idx, 0], projection='3d')
         ax1.plot_surface(X1, Y1, z1, cmap='viridis', norm=norm)
-        ax1.set_xlabel('R-MPA Pressure [MPa]', fontproperties=font_prop, fontsize=labeltitel_fontsize)
-        ax1.set_ylabel('Fixed L-MPA Pressure [MPa]', fontproperties=font_prop, fontsize=labeltitel_fontsize)
+        ax1.set_xlabel('R-MPA Pressure [MPa]', labelpad=15, fontproperties=font_prop, fontsize=labeltitel_fontsize)
+        ax1.set_ylabel('Fixed L-MPA Pressure [MPa]', labelpad=15, fontproperties=font_prop, fontsize=labeltitel_fontsize)
         ax1.set_zlabel(r'$\theta$ [deg]', fontproperties=font_prop, fontsize=labeltitel_fontsize)
         ax1.tick_params(axis='x', labelsize=label_fontsize)
         ax1.tick_params(axis='y', labelsize=label_fontsize)
         ax1.tick_params(axis='z', labelsize=label_fontsize)
         ax1.view_init(elev=40, azim=-140)
-        ax1.text2D(0.5, -0.15, f"({chr(97+idx*2)}) {labels[idx]} ", transform=ax1.transAxes,
+        ax1.text2D(0.5, -0.15, f"({chr(97+idx*2)}) {labels[idx]}", transform=ax1.transAxes,
                    ha='center', va='top', fontproperties=font_prop, fontsize=title_fontsize)
 
         # (b) step_plus
         ax2 = fig.add_subplot(gs[idx, 1], projection='3d')
         ax2.plot_surface(X2, Y2, z2, cmap='viridis', norm=norm)
-        ax2.set_xlabel('Fixed R-MPA Pressure [MPa]', fontproperties=font_prop, fontsize=labeltitel_fontsize)
-        ax2.set_ylabel('L-MPA Pressure [MPa]', fontproperties=font_prop, fontsize=labeltitel_fontsize)
+        ax2.set_xlabel('Fixed R-MPA Pressure [MPa]', labelpad=15, fontproperties=font_prop, fontsize=labeltitel_fontsize)
+        ax2.set_ylabel('L-MPA Pressure [MPa]', labelpad=15, fontproperties=font_prop, fontsize=labeltitel_fontsize)
         ax2.set_zlabel(r'$\theta$ [deg]', fontproperties=font_prop, fontsize=labeltitel_fontsize)
         ax2.tick_params(axis='x', labelsize=label_fontsize)
         ax2.tick_params(axis='y', labelsize=label_fontsize)
         ax2.tick_params(axis='z', labelsize=label_fontsize)
         ax2.view_init(elev=40, azim=-140)
-        ax2.text2D(0.5, -0.15, f"({chr(98+idx*2)}) {labels[idx]} ", transform=ax2.transAxes,
+        ax2.text2D(0.5, -0.15, f"({chr(98+idx*2)}) {labels[idx]}", transform=ax2.transAxes,
                    ha='center', va='top', fontproperties=font_prop, fontsize=title_fontsize)
 
     # カラーバー（右端）
-    cbar_ax = fig.add_axes([0.92, 0.1, 0.015, 0.8])
-    sm = plt.cm.ScalarMappable(cmap='viridis', norm=norm)
+    cbar_ax = fig.add_axes([0.2, 0.05, 0.6, 0.02])
+    sm = plt.cm.ScalarMappable(cmap='viridis_r', norm=norm)
     sm.set_array([])
-    cbar = plt.colorbar(sm, cax=cbar_ax)
-    cbar.set_label('θ [deg]', fontproperties=font_prop, fontsize=title_fontsize)
+    cbar = plt.colorbar(sm, cax=cbar_ax, orientation='horizontal')
+    cbar.set_label(r'$\theta$ [deg]', fontproperties=font_prop, fontsize=title_fontsize)
+    cbar.ax.tick_params(labelsize=label_fontsize)
+
 
     plt.savefig(output_pdf_path)
     plt.close()
@@ -114,8 +116,8 @@ if __name__ == '__main__':
         "csv/255mm.csv",
         "csv/260mm.csv"
     ]
-    labels = ["240mm", "245mm", "250mm", "255mm", "260mm"]
+    labels = ["0.240m", "0.245m", "0.250m", "0.255m", "0.260m"]
     font_path = "/usr/share/fonts/truetype/msttcorefonts/Times_New_Roman.ttf"  # なければ None に
-    output_path = "step_surfaces_5pairs_improved.pdf"
+    output_path = "5pairs_improved.pdf"
 
     plot_5_pairs(csv_files, labels, output_path, font_path=font_path)
