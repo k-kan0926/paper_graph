@@ -26,8 +26,12 @@ if hasattr(pred, "simulate"):
     th_hat = pred.simulate(th[0], ps, pd, dt)
 elif hasattr(pred, "step"):
     th_hat = pred.step(th[0], ps, pd, dt)
+elif hasattr(pred, "f_static"):
+    th_hat = pred.f_static(ps, pd)
+elif hasattr(pred, "theta_hat"):
+    th_hat = pred.theta_hat(ps, pd)
 else:
-    th_hat = pred.f_static(ps, pd)  # 静的のみ
+    raise RuntimeError("predictor に simulate/step/f_static/theta_hat のいずれかが必要です。")
 err = th - th_hat
 rmse = float(np.sqrt(np.mean(err**2)))
 mae  = float(np.mean(np.abs(err)))
