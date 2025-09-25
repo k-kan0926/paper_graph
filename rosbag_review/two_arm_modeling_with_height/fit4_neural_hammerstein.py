@@ -56,7 +56,7 @@ class MonoDeltaNN(nn.Module):
     def __init__(self, M=6, hidden=32, c_grid=None):
         super().__init__()
         self.M = M
-        self.c = nn.Parameter(torch.tensor(c_grid, dtype=torch.float32), requires_grad=False)
+        self.c = nn.Parameter(torch.tensor(c_grid, dtype=torch.float32), requires_grad=True)
         self.enc = nn.Sequential(
             nn.Linear(1, hidden), nn.ELU(),
             nn.Linear(hidden, hidden), nn.ELU()
@@ -231,7 +231,7 @@ def main():
         sol = lsq_linear(X_aug, y_aug, bounds=(lb,ub), method="trf", lsmr_tol='auto', verbose=0)
         alpha, kS, kD = (sol.x / scales).tolist()
 
-        rmse = rollout_rmse(ps_s, pd_s, th_s, d, alpha, kS, kD, theta_stat_fn)
+        rmse = rollout_rmse(ps_s, pd_s, th_s, dt, d, alpha, kS, kD, theta_stat_fn)
         results.append((d, alpha, kS, kD, rmse))
         if (best_dyn is None) or (rmse < best_dyn[-1]):
             best_dyn = (d, alpha, kS, kD, rmse)
