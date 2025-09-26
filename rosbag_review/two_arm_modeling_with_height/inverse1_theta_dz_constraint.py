@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#python inverse_theta_dz_constraint.py --model out/model_k1_model.npz --theta-deg 20 --wz 0.3 --wsigma 0.02 
+#python inverse1_theta_dz_constraint.py --model out/model_k1/model_k1_model.npz --theta-deg 20 --wz 0.3 --wsigma 0.02 
 # -*- coding: utf-8 -*-
 import argparse, os, numpy as np
 
