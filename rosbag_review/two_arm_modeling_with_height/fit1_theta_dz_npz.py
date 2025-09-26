@@ -6,10 +6,7 @@ CSVから静的マップを学習して <out-prefix>_model.npz を保存しま�
   dz    = g(p_sum, p_diff)   [m]  （CSVに dz[m] 列がある場合だけ）
 
 使い方例:
-  python inverse_theta_dz_npz.py \
-    --csv out/diff_run1_h_data.csv \
-    --out-prefix out/model_k1/model_k1 \
-    --degree 3 --l2 1e-4 --pmax 0.7
+  python fit1_theta_dz_npz.py --csv out/diff_run1_h_data.csv  --out-prefix out/model_k1/model_k1 --degree 3 --l2 1e-4 --pmax 0.7
 """
 import argparse, os
 import numpy as np
