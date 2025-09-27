@@ -57,20 +57,50 @@ def z_pred(ps, pd, zc):
 def clamp_box(p1, p2, pmax):
     return np.clip(p1,0,pmax), np.clip(p2,0,pmax)
 
-def invert_delta_closed(ps, theta_star, f_theta_stat):
-    # 1D solve for Δ via monotone property (bisection in Δ)
-    lo, hi = -2.0, 2.0  # MPa range in Δ (wider than box; will be projected)
-    for _ in range(50):
-        mid = 0.5*(lo+hi)
-        val = f_theta_stat(ps, mid) - theta_star
-        if val==0.0: break
-        # need sign at bounds
-        vlo = f_theta_stat(ps, lo) - theta_star
-        if np.sign(vlo)*np.sign(val) <= 0:
-            hi = mid
+def invert_delta_closed(ps, theta_star, f_theta_stat, pmax=None):
+    """
+    Δ の1次元解を二分探索で求める。可行域(箱制約)から導かれる Δ の上限下限を使い、
+    区間内で必ず収束するようにする。単調性(∂θ/∂Δ≥0)を前提。
+    """
+    # 可行域: p1=(ps+pd)/2, p2=(ps-pd)/2 ∈ [0, pmax]
+    #  => pd ∈ [max(-ps, ps-2pmax), min(ps, 2pmax-ps)]
+    if pmax is not None:
+        lo_box = max(-ps, ps - 2.0*pmax)
+        hi_box = min(ps,  2.0*pmax - ps)
+        lo, hi = float(lo_box), float(hi_box)
+        if lo > hi:
+            # ps が箱制約の外にいる場合は、ps を投影した上で対処（安全側）
+            ps = float(np.clip(ps, 0.0, 2.0*pmax))
+            lo_box = max(-ps, ps - 2.0*pmax)
+            hi_box = min(ps,  2.0*pmax - ps)
+            lo, hi = float(lo_box), float(hi_box)
+    else:
+        # pmax不明なら広めに。でも最後に投影する。
+        lo, hi = -2.0, 2.0
+
+    # 区間両端の値
+    f_lo = f_theta_stat(ps, lo) - theta_star
+    f_hi = f_theta_stat(ps, hi) - theta_star
+
+    # もし区間が挟み込んでいなければ、最も近い端点を返す（単調性に基づく安全策）
+    if f_lo >= 0.0 and f_hi >= 0.0:
+        return lo
+    if f_lo <= 0.0 and f_hi <= 0.0:
+        return hi
+
+    # 二分探索
+    for _ in range(60):
+        mid = 0.5*(lo + hi)
+        f_mid = f_theta_stat(ps, mid) - theta_star
+        if f_mid == 0.0:
+            return mid
+        if np.sign(f_mid) == np.sign(f_lo):
+            lo, f_lo = mid, f_mid
         else:
-            lo = mid
-    return 0.5*(lo+hi)
+            hi, f_hi = mid, f_mid
+
+    return 0.5*(lo + hi)
+
 
 def main():
     ap = argparse.ArgumentParser()
@@ -110,7 +140,7 @@ def main():
     if args.delta0 is not None:
         delta0 = float(args.delta0)
     else:
-        delta0 = invert_delta_closed(sigma0, theta0, theta_stat)
+        delta0 = invert_delta_closed(sigma0, theta0, theta_stat, pmax=pmax)
         p1 = 0.5*(sigma0+delta0); p2=0.5*(sigma0-delta0)
         p1,p2 = clamp_box(p1,p2,pmax); sigma0 = p1+p2; delta0 = p1-p2
 
@@ -130,7 +160,7 @@ def main():
     # static inverse warm start
     for k in range(H):
         ps = sigma_ref
-        pd = invert_delta_closed(ps, theta_star, theta_stat)
+        pd = invert_delta_closed(ps, theta_star, theta_stat, pmax=pmax)
         p1 = 0.5*(ps+pd); p2 = 0.5*(ps-pd); p1,p2 = clamp_box(p1,p2,pmax)
         u[2*k+0] = p1+p2; u[2*k+1] = p1-p2
 
@@ -178,7 +208,7 @@ def main():
                 block_pen = (ps_cmd-ps_prev_cmd)**2 + (pd_cmd-pd_prev_cmd)**2
 
             c = args.w_stage*(theta-theta_star)**2 \
-              + args.wz*(z_pred(ps_cmd,pd_cmd,zc)**2) \
+              + args.wz*(z_pred(ps_eff,pd_eff,zc)**2) \
               + args.w_sigma*((ps_cmd - sigma_ref)**2) \
               + args.w_rate*(dS_cmd**2 + dD_cmd**2) \
               + args.w_block*block_pen \
