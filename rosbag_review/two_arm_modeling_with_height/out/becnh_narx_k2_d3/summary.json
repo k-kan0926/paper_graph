@@ -1,0 +1,12 @@
+{
+  "model": "NARX",
+  "best_delay": 5,
+  "val_rmse_deg": 3.2153232277500012,
+  "N": 141925,
+  "dt": 0.01,
+  "lag_y": 3,
+  "lag_u": 3,
+  "degree": 3,
+  "ridge_alpha": 0.001,
+  "elapsed_sec": 257.56287717819214
+}
