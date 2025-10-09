@@ -1,0 +1,5 @@
+{
+  "model": "NLSS_GRU",
+  "hidden": 32,
+  "epochs": 60
+}
