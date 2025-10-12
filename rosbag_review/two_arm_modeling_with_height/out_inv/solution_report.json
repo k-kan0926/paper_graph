@@ -1,0 +1,126 @@
+{
+  "grid": {
+    "x": [
+      0.7699999999999999,
+      -0.63
+    ],
+    "fun": 0.2941729229108476,
+    "nit": 6561,
+    "success": true,
+    "message": "coarse grid",
+    "theta_hat": -0.18781767785549164,
+    "theta_err": -0.5368835282543576,
+    "p1[MPa]": 0.06999999999999995,
+    "p2[MPa]": 0.7,
+    "is_feasible": true
+  },
+  "slsqp_0": {
+    "x": [
+      0.2750137448312268,
+      0.2750137448312273
+    ],
+    "fun": 0.5736176981920798,
+    "nit": 2,
+    "success": true,
+    "message": "Optimization terminated successfully",
+    "theta_hat": -0.4078102111816406,
+    "theta_err": -0.7568760615805066,
+    "p1[MPa]": 0.2750137448312271,
+    "p2[MPa]": -2.498001805406602e-16,
+    "is_feasible": false
+  },
+  "slsqp_1": {
+    "x": [
+      0.3249862789728997,
+      0.3249862789729831
+    ],
+    "fun": 0.5512906241814349,
+    "nit": 5,
+    "success": true,
+    "message": "Optimization terminated successfully",
+    "theta_hat": -0.3927120566368103,
+    "theta_err": -0.7417779070356763,
+    "p1[MPa]": 0.3249862789729414,
+    "p2[MPa]": -4.168887457467463e-14,
+    "is_feasible": false
+  },
+  "slsqp_2": {
+    "x": [
+      0.3249862789674547,
+      0.3249862789640951
+    ],
+    "fun": 0.5512906241813995,
+    "nit": 6,
+    "success": true,
+    "message": "Optimization terminated successfully",
+    "theta_hat": -0.3927120566368103,
+    "theta_err": -0.7417779070356763,
+    "p1[MPa]": 0.3249862789657749,
+    "p2[MPa]": 1.6797951918334775e-12,
+    "is_feasible": true
+  },
+  "slsqp_3": {
+    "x": [
+      0.3249783862654288,
+      0.32497838695503994
+    ],
+    "fun": 0.5513190466851561,
+    "nit": 3,
+    "success": true,
+    "message": "Optimization terminated successfully",
+    "theta_hat": -0.392731249332428,
+    "theta_err": -0.7417970997312939,
+    "p1[MPa]": 0.32497838661023437,
+    "p2[MPa]": -3.448055729826649e-10,
+    "is_feasible": false
+  },
+  "trust_constr": {
+    "x": [
+      0.5020337015581844,
+      0.527124630705755
+    ],
+    "fun": 0.42002257923137165,
+    "nit": 109,
+    "success": true,
+    "message": "`xtol` termination condition is satisfied.",
+    "theta_hat": -0.2970782518386841,
+    "theta_err": -0.64614410223755,
+    "p1[MPa]": 0.5145791661319696,
+    "p2[MPa]": -0.012545464573785303,
+    "is_feasible": false
+  },
+  "powell": {
+    "x": [
+      0.45826975252476865,
+      -1.0907585479850657
+    ],
+    "fun": 0.31735773881539947,
+    "nit": 6,
+    "success": true,
+    "message": "Optimization terminated successfully.",
+    "theta_hat": -0.21241222321987152,
+    "theta_err": -0.5614780736187375,
+    "p1[MPa]": -0.3162443977301485,
+    "p2[MPa]": 0.7745141502549171,
+    "is_feasible": false
+  },
+  "de": {
+    "x": [
+      0.2972111522757942,
+      1.1027890592414844
+    ],
+    "fun": 0.184481508827009,
+    "nit": 54,
+    "success": true,
+    "message": "differential_evolution",
+    "theta_hat": -0.07941766083240509,
+    "theta_err": -0.428483511231271,
+    "p1[MPa]": 0.7000001057586394,
+    "p2[MPa]": -0.4027889534828451,
+    "is_feasible": false
+  },
+  "best": {
+    "name": "grid",
+    "fun": 0.2941729229108476
+  }
+}
