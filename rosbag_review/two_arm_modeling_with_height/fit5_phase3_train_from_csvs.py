@@ -18,6 +18,13 @@ Outputs:
   out-dir/{hw_poly|hw_rbf|pwa|gp|mononn}_common_meta.npz
   out-dir/{arx|narx|nlss|koopman}_meta.json
   out-dir/narx_common_meta.npz
+python phase1_model_zoo_multi.py \
+  --dyn_csvs out/dyn_prbs.csv out/dyn_multi.csv out/dyn_cyrip.csv \
+  --stat_csvs out/static1.csv out/static2.csv \
+  --out-dir out_zoo_multi --enable-all \
+  --delay-grid 0,1,2,3 \
+  --z-mode learn --z-col dz[m] --z-source stat --z-qstatic-from-stat \
+  --z-feat quad --z-ss-theta-eps 0.01 --z-ss-dz-eps 0.002
 """
 
 import os, json, math, argparse, time, warnings
