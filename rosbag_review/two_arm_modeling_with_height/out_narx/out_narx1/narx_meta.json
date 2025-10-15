@@ -177,5 +177,15 @@
   "ss_lambda": 0.03,
   "ss_theta_eps": 0.01,
   "ss_z_eps": 0.002,
-  "rollout_teacher_beta": 0.2
+  "rollout_teacher_beta": 0.2,
+  "theta_train_minmax": [
+    -0.6959149949305471,
+    0.7249263184482777
+  ],
+  "dt_est": 0.004997253417975855,
+  "pressure_limits": {
+    "p_max_each_side_MPa": null,
+    "ps_rate_limit_MPa_s": null,
+    "pd_rate_limit_MPa_s": null
+  }
 }
