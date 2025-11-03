@@ -18,9 +18,9 @@ Outputs:
   out-dir/{hw_poly|hw_rbf|pwa|gp|mononn}_common_meta.npz
   out-dir/{arx|narx|nlss|koopman}_meta.json
   out-dir/narx_common_meta.npz
-python phase1_model_zoo_multi.py \
-  --dyn_csvs out/dyn_prbs.csv out/dyn_multi.csv out/dyn_cyrip.csv \
-  --stat_csvs out/static1.csv out/static2.csv \
+python fit5_phase3_train_from_csvs.py \
+  --dyn_csvs out/dynamic_prbs_data.csv out/dynamic_multi_data.csv out/dynamic_cyrip_data.csv \
+  --stat_csvs out/static1_data.csv out/static2_data.csv \
   --out-dir out_zoo_multi --enable-all \
   --delay-grid 0,1,2,3 \
   --z-mode learn --z-col dz[m] --z-source stat --z-qstatic-from-stat \
@@ -90,7 +90,8 @@ def rollout_rmse_firstorder(ps, pd, th, dt, d, alpha, kS, kD, theta_stat_vec):
     return float(np.sqrt(np.mean(err**2)))
 
 def _fit_dyn_with_delay_multi(theta_stat_vec, sessions, sg_win, sg_poly,
-                              delay_grid, l2_dyn=5e-3, kdelta_min=-2.0, log_prefix=""):
+                              delay_grid, l2_dyn=5e-3, kdelta_min=-2.0,
+                              alpha_min=0.0, phi1_sign="stat_minus_theta", log_prefix=""):
     """
     Multi-session variant.
     sessions: list of dicts with keys {'ps','pd','th','dt','name'}
@@ -105,18 +106,17 @@ def _fit_dyn_with_delay_multi(theta_stat_vec, sessions, sg_win, sg_poly,
     best = None; logs = []; per_delay_detail=[]
     print(f"{log_prefix}  [dyn] start grid-search over delays: {delays} | sessions={len(sessions)}")
 
-    for d in delays:
+    for di, d in enumerate(delays):
         # stack across sessions
         X_stack = []; y_stack = []
-        # also keep per-session RMSE for reporting
-        sess_rmses = []
-        scales_all = []  # we will standardize per-delay globally
-        # first pass: build and stack
+
         for sess in sessions:
             ps = sess['ps']; pd = sess['pd']; th = sess['th']; dt = sess['dt']
+            # 平滑化系列（微分・静的評価・phi1の両辺で使う）
             ps_s, _ = smooth_and_deriv(ps, dt, win=sg_win, poly=sg_poly)
             pd_s, _ = smooth_and_deriv(pd, dt, win=sg_win, poly=sg_poly)
-            th_s, dth= smooth_and_deriv(th, dt, win=sg_win, poly=sg_poly)
+            th_s, dth = smooth_and_deriv(th, dt, win=sg_win, poly=sg_poly)  # y = dθ/dt は th_s から
+
             N = len(ps)
             start = d+1
             if N <= start+1:  # not enough length
@@ -124,11 +124,21 @@ def _fit_dyn_with_delay_multi(theta_stat_vec, sessions, sg_win, sg_poly,
             idx = np.arange(start, N)
             ku = idx - d
             kup = idx - d - 1
-            ths = theta_stat_vec(ps_s[ku], pd_s[ku])  # array
-            phi1= ths - th_s[idx]
+
+            # ★修正1: 静的モデルは平滑化入力で評価
+            ths  = theta_stat_vec(ps_s[ku], pd_s[ku])
+
+            # ★修正2: phi1 は th ではなく th_s と比較（左右のフィルタ特性を揃える）
+            if phi1_sign == "stat_minus_theta":
+                phi1 = ths - th_s[idx]
+            else:
+                phi1 = th_s[idx] - ths
+
+            # 微分は平滑化系列から
             dS  = (ps_s[ku] - ps_s[kup]) / dt
             dD  = (pd_s[ku] - pd_s[kup]) / dt
             y   = dth[idx]
+
             X   = np.column_stack([phi1, dS, dD])
             X_stack.append(X); y_stack.append(y)
 
@@ -139,20 +149,51 @@ def _fit_dyn_with_delay_multi(theta_stat_vec, sessions, sg_win, sg_poly,
         X_all = np.vstack(X_stack)
         y_all = np.hstack(y_stack)
 
+        # 診断（最初の遅延のみ一度）
+        if di == 0:
+            def _corr(a,b):
+                sa, sb = np.std(a, ddof=1), np.std(b, ddof=1)
+                if sa < 1e-12 or sb < 1e-12:
+                    return 0.0
+                return float(np.corrcoef(a,b)[0,1])
+            print(f"{log_prefix}    diag: std(y)={np.std(y_all):.3f}  std(phi1)={np.std(X_all[:,0]):.3f}  "
+                  f"std(dS)={np.std(X_all[:,1]):.3f}  std(dD)={np.std(X_all[:,2]):.3f}")
+        # 各遅延の相関表示
+        def _corr(a,b):
+            sa, sb = np.std(a, ddof=1), np.std(b, ddof=1)
+            if sa < 1e-12 or sb < 1e-12:
+                return 0.0
+            return float(np.corrcoef(a,b)[0,1])
+        print(
+            f"{log_prefix}    delay={d}: "
+            f"std(phi1)={np.std(X_all[:,0]):.4g} "
+            f"std(dS)={np.std(X_all[:,1]):.4g} "
+            f"std(dD)={np.std(X_all[:,2]):.4g} | "
+            f"corr(y,phi1)={_corr(y_all,X_all[:,0]):.4f} "
+            f"corr(y,dS)={_corr(y_all,X_all[:,1]):.4f} "
+            f"corr(y,dD)={_corr(y_all,X_all[:,2]):.4f}"
+        )
+
         # global column standardization for this delay
-        scales = np.std(X_all, axis=0, ddof=1); scales[scales<1e-8]=1.0
-        Xs = X_all / scales
+        means  = np.mean(X_all, axis=0)
+        Xc     = X_all - means
+        scales = np.std(Xc, axis=0, ddof=1); scales[scales<1e-8]=1.0
+        Xs     = Xc / scales
         lam = float(l2_dyn)
         X_aug = np.vstack([Xs, math.sqrt(lam)*np.eye(3)])
         y_aug = np.hstack([y_all, np.zeros(3)])
 
-        lb = [0.0, -np.inf, float(kdelta_min)]
+        lb = [float(alpha_min), -np.inf, float(kdelta_min)]
         ub = [np.inf, np.inf, np.inf]
         sol = lsq_linear(X_aug, y_aug, bounds=(lb,ub), method="trf", lsmr_tol='auto', verbose=0)
-        alpha, kS, kD = (sol.x / scales).tolist()
+        # 係数は (x-mean)/scale に対する係数 → 生特徴へ換算
+        alpha_s, kS_s, kD_s = sol.x.tolist()
+        alpha, kS, kD = (alpha_s/scales[0], kS_s/scales[1], kD_s/scales[2])
+        # 切片はセンタリングで y に吸収済み
 
         # evaluate RMSE per session, then average
         rmse_list = []
+        # rollout は生系列で OK（内部で theta_stat_vec を使うが、ここは学習時と同条件に合わせるため wrapper 側で処理）
         for sess in sessions:
             rm = rollout_rmse_firstorder(sess['ps'], sess['pd'], sess['th'], sess['dt'],
                                          d, alpha, kS, kD, theta_stat_vec)
@@ -171,6 +212,7 @@ def _fit_dyn_with_delay_multi(theta_stat_vec, sessions, sg_win, sg_poly,
     print(f"{log_prefix}  [dyn] done in {time.time()-t0:.2f}s -> best: d={best['d']}, RMSE_mean={best['rmse']:.3f}")
     return best, per_delay_detail
 
+
 def standardize_cols(S, D):
     muS, sdS = float(np.mean(S)), float(np.std(S)+1e-8)
     muD, sdD = float(np.mean(D)), float(np.std(D)+1e-8)
@@ -187,6 +229,7 @@ def train_val_split(N, val_ratio):
 def save_json(path, obj):
     with open(path, "w") as f:
         json.dump(obj, f, indent=2)
+
 
 # ===== CSV loading (single or multi) =====
 def _load_single_csv(path, col_sum, col_diff, col_theta, col_time):
@@ -517,7 +560,6 @@ def arx_fit_predict_multi(sessions, lag_y=3, lag_u=3, delay=0, alpha=1e-3, log_p
         return float("inf"), dict(model="ARX", error="no usable samples")
 
     # train on concatenation of features/targets built above
-    # (we rebuild X_all to align with a single ridge fit)
     X_cat=[]; y_cat=[]
     for sess in sessions:
         U = np.column_stack([sess['ps'], sess['pd']])
@@ -663,16 +705,20 @@ def koopman_edmd_fit_rollout_multi(sessions, degree=2, log_prefix=""):
 
 # ----------------- wrapper: static + shared dynamics -----------------
 def eval_static_plus_dyn_multi(name, static_model, sessions, sg_win, sg_poly, delay_grid,
-                               muS, sdS, muD, sdD, log_prefix=""):
+                               muS, sdS, muD, sdD, alpha_min=0.0, phi1_sign="stat_minus_theta",
+                               log_prefix=""):
     # vectorized closure: accepts arrays
     def theta_stat_vec(ps_array, pd_array):
+        # ここは「学習時と同じ入力正規化だけ」行う（平滑化は学習ループ側で既に実施）
         Sh = (np.asarray(ps_array) - muS)/sdS
         Dh = (np.asarray(pd_array) - muD)/sdD
         return static_model.predict(Sh, Dh)
 
     best_dyn, dyn_logs = _fit_dyn_with_delay_multi(theta_stat_vec, sessions,
                                                    sg_win, sg_poly, delay_grid,
-                                                   l2_dyn=5e-3, kdelta_min=-2.0, log_prefix=log_prefix)
+                                                   l2_dyn=5e-3, kdelta_min=-2.0,
+                                                   alpha_min=alpha_min, phi1_sign=phi1_sign,
+                                                   log_prefix=log_prefix)
     return dict(model=name, dynamics=best_dyn, logs=dyn_logs)
 
 # ----------------- NARX専用: 共通npz保存 -----------------
@@ -713,7 +759,7 @@ def main():
     ap.add_argument("--col-sum", default="p_sum[MPa]")
     ap.add_argument("--col-diff", default="p_diff[MPa]")
     ap.add_argument("--col-theta", default="theta[deg]")
-    ap.add_argument("--col-time", default="time[s]")
+    ap.add_argument("--col-time", default="t[s]")
     ap.add_argument("--dt", type=float, default=None)  # will be used only for legacy single-csv path override
 
     ap.add_argument("--val-ratio", type=float, default=0.2)
@@ -721,6 +767,9 @@ def main():
     ap.add_argument("--sg-win", type=int, default=17)
     ap.add_argument("--sg-poly", type=int, default=3)
     ap.add_argument("--delay-grid", type=str, default="0,1,2,3,4,5")
+    ap.add_argument("--alpha-min", type=float, default=0.0, help="shared dynamics: lower bound of alpha (set <0 for diagnosis)")
+    ap.add_argument("--phi1-sign", choices=["stat_minus_theta", "theta_minus_stat"], default="stat_minus_theta",
+                    help="phi1 = (theta_stat - theta) or (theta - theta_stat)")
 
     ap.add_argument("--enable-all", action="store_true")
     ap.add_argument("--enable-hw-poly", action="store_true")
@@ -892,7 +941,7 @@ def main():
                 meta_json["z_metrics"] = z_metrics
             save_json(os.path.join(args.out_dir, f"{tag_name}_meta.json"), meta_json)
 
-            # 共通 NPZ（dtは代表値：singleならdt、multiならdt_rep）
+            # ↑括弧の閉じ忘れ防止のため注意（typo対策）
             out_npz = os.path.join(args.out_dir, f"{tag_name}_common_meta.npz")
             save_common_meta_npz(out_npz, dt, muS, sdS, muD, sdD,
                                  pack_dict["dynamics"], z_coef, z_feat_names, z_metrics=z_metrics)
@@ -905,8 +954,10 @@ def main():
             mdl = StaticPoly(deg=args.poly_degree, alpha=args.ridge_alpha).fit(Sh_tr, Dh_tr, th_tr)
             print("[HW_Poly] fit dynamics + delay search (multi-session)...")
             pack = eval_static_plus_dyn_multi("HW_Poly", mdl, sessions,
-                                              args.sg_win, args.sg_poly, args.delay_grid,
-                                              muS, sdS, muD, sdD, log_prefix="[HW_Poly]")
+                                              args.sg_win, args.sg_poly, args.delay_grid, 
+                                              muS, sdS, muD, sdD,
+                                              alpha_min=args.alpha_min, phi1_sign=args.phi1_sign,
+                                              log_prefix="[HW_Poly]")
             add_result("HW_Poly", pack["dynamics"]["rmse"], extra=pack)
             finalize_static_model("hw_poly", pack)
 
@@ -916,7 +967,9 @@ def main():
             print("[HW_RBF] fit dynamics + delay search (multi-session)...")
             pack = eval_static_plus_dyn_multi("HW_RBF", mdl, sessions,
                                               args.sg_win, args.sg_poly, args.delay_grid,
-                                              muS, sdS, muD, sdD, log_prefix="[HW_RBF]")
+                                              muS, sdS, muD, sdD,
+                                              alpha_min=args.alpha_min, phi1_sign=args.phi1_sign,
+                                              log_prefix="[HW_RBF]")
             add_result("HW_RBF", pack["dynamics"]["rmse"], extra=pack)
             finalize_static_model("hw_rbf", pack)
 
@@ -926,7 +979,9 @@ def main():
             print("[PWA] fit dynamics + delay search (multi-session)...")
             pack = eval_static_plus_dyn_multi("PWA", mdl, sessions,
                                               args.sg_win, args.sg_poly, args.delay_grid,
-                                              muS, sdS, muD, sdD, log_prefix="[PWA]")
+                                              muS, sdS, muD, sdD,
+                                              alpha_min=args.alpha_min, phi1_sign=args.phi1_sign,
+                                              log_prefix="[PWA]")
             add_result("PWA", pack["dynamics"]["rmse"], extra=pack)
             finalize_static_model("pwa", pack)
 
@@ -937,7 +992,9 @@ def main():
                 print("[GP] fit dynamics + delay search (multi-session)...")
                 pack = eval_static_plus_dyn_multi("GP", mdl, sessions,
                                                   args.sg_win, args.sg_poly, args.delay_grid,
-                                                  muS, sdS, muD, sdD, log_prefix="[GP]")
+                                                  muS, sdS, muD, sdD,
+                                                  alpha_min=args.alpha_min, phi1_sign=args.phi1_sign,
+                                                  log_prefix="[GP]")
                 add_result("GP", pack["dynamics"]["rmse"], extra=pack)
                 # kernel情報をJSONにも残す
                 pack_with_kernel = dict(pack); pack_with_kernel["kernel"] = str(mdl.gp.kernel_)
@@ -955,9 +1012,11 @@ def main():
             print("[MonoNN] fit dynamics + delay search (multi-session)...")
             pack = eval_static_plus_dyn_multi("MonoNN", mdl, sessions,
                                               args.sg_win, args.sg_poly, args.delay_grid,
-                                              muS, sdS, muD, sdD, log_prefix="[MonoNN]")
+                                              muS, sdS, muD, sdD,
+                                              alpha_min=args.alpha_min, phi1_sign=args.phi1_sign,
+                                              log_prefix="[MonoNN]")
             add_result("MonoNN", pack["dynamics"]["rmse"], extra=pack)
-            torch.save(mdl.state_dict, os.path.join(args.out_dir, "mononn_state.pt"))
+            torch.save(mdl.state_dict(), os.path.join(args.out_dir, "mononn_state.pt"))
             meta_json = dict(M=args.mono_nn_M, hidden=args.mono_nn_hidden,
                              learn_centers=args.mono_nn_learn_centers, dyn=pack["dynamics"])
             save_json(os.path.join(args.out_dir, "mononn_meta.json"), meta_json)
@@ -1006,9 +1065,13 @@ def main():
 
             narx_npz = os.path.join(args.out_dir, "narx_common_meta.npz")
             theta_unit = "deg"  # 列は deg 前提
-            save_narx_common_meta_npz(narx_npz, dt=dt, narx_meta=best_meta,
-                                      z_coef=z_coef, z_feat_names=z_feat_names,
-                                      z_metrics=z_metrics, theta_unit=theta_unit)
+            np.savez(narx_npz, dummy=0)  # ファイル作成の安全策（上書きOK）
+            # 上の np.savez は不要なら削除可。以降で正しく保存。
+            def save_narx_common_meta_npz_wrapper():
+                save_narx_common_meta_npz(narx_npz, dt=dt, narx_meta=best_meta,
+                                          z_coef=z_coef, z_feat_names=z_feat_names,
+                                          z_metrics=z_metrics, theta_unit=theta_unit)
+            save_narx_common_meta_npz_wrapper()
             print(f"[NARX] saved common meta (θ NARX + z) -> {narx_npz}")
 
         if flags["nlss"]:
