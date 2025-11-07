@@ -21,7 +21,7 @@ Outputs:
 python fit5_phase3_train_from_csvs.py \
   --dyn_csvs out/dynamic_prbs_data.csv out/dynamic_multi_data.csv out/dynamic_cyrip_data.csv \
   --stat_csvs out/static1_data.csv out/static2_data.csv \
-  --out-dir out_zoo_multi --enable-all \
+  --out-dir out_multi_csvs --enable-all \
   --delay-grid 0,1,2,3 \
   --z-mode learn --z-col dz[m] --z-source stat --z-qstatic-from-stat \
   --z-feat quad --z-ss-theta-eps 0.01 --z-ss-dz-eps 0.002

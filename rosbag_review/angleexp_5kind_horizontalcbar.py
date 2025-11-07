@@ -97,7 +97,7 @@ def plot_5_pairs(csv_paths, labels, output_pdf_path, font_path=None):
 
     # カラーバー（右端）
     cbar_ax = fig.add_axes([0.2, 0.05, 0.6, 0.02])
-    sm = plt.cm.ScalarMappable(cmap='viridis_r', norm=norm)
+    sm = plt.cm.ScalarMappable(cmap='viridis', norm=norm)
     sm.set_array([])
     cbar = plt.colorbar(sm, cax=cbar_ax, orientation='horizontal')
     cbar.set_label(r'$\theta$ [deg]', fontproperties=font_prop, fontsize=title_fontsize)
