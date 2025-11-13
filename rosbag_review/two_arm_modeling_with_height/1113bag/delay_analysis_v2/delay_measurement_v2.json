@@ -1,0 +1,15 @@
+{
+  "delay_p1_corr": 0.09995460000027379,
+  "delay_p2_corr": 0.10995006000030116,
+  "delay_p1_step": 0.1048839100000003,
+  "delay_p2_step": 0.004974604999999688,
+  "delay_weighted": 0.08358459987669627,
+  "delay_std": 0.04107075977658271,
+  "n_steps_p1": 23,
+  "n_steps_p2": 12,
+  "n_steps_200Hz": 17,
+  "n_steps_100Hz": 8,
+  "confidence_p1_corr": 0.9143989007759314,
+  "confidence_p2_corr": 0.9038840958452917,
+  "dt_sampling": 0.004997730000013689
+}
