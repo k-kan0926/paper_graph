@@ -3,6 +3,13 @@
 
 import sys, re, csv, pathlib
 import numpy as np
+import matplotlib as mpl
+mpl.rcParams.update({
+    "pdf.fonttype": 42,
+    "ps.fonttype": 42,
+    "text.usetex": False,
+    "mathtext.fontset": "stix",
+})
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 from mpl_toolkits.mplot3d import Axes3D
