@@ -1,0 +1,20 @@
+python train_narx_p1p2_cmd_final.py \
+>   --dyn_csvs \
+>     processed_data/dyn_prbs_broad.csv \
+>     processed_data/dyn_multisine_rich.csv \
+>     processed_data/dyn_random_large.csv \
+>     processed_data/dyn_boundary_stress.csv \
+>     processed_data/dyn_chirp_sweep.csv \
+>     processed_data/validation_unseen_freq.csv \
+>   --stat_csvs \
+>     processed_data/static_low.csv \
+>     processed_data/static_high.csv \
+>   --out_dir models/narx_p1p2_production \
+>   --lags 24 \
+>   --delay 17 \
+>   --delay_measured_ms 83.58 \
+>   --hidden 192 \
+>   --dropout 0.05 \
+>   --epochs 400 \
+>   --batch_size 1024 \
+>   --seed 42
