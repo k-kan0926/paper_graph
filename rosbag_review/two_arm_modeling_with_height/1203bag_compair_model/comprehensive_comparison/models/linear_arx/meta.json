@@ -1,0 +1,30 @@
+{
+  "model_type": "linear_arx",
+  "lags": 24,
+  "n_features": 5,
+  "feature_names": [
+    "theta[rad]",
+    "p1_cmd[MPa]",
+    "p2_cmd[MPa]",
+    "dp1_cmd_dt[MPa/s]",
+    "dp2_cmd_dt[MPa/s]"
+  ],
+  "hidden": 128,
+  "dropout": 0.05,
+  "train_files": [
+    "dyn_boundary_stress.csv",
+    "dyn_chirp_sweep.csv",
+    "dyn_multisine_rich.csv",
+    "dyn_prbs_broad.csv",
+    "dyn_random_large.csv",
+    "dyn_slow_drift.csv",
+    "static_high.csv",
+    "static_low.csv"
+  ],
+  "val_files": [
+    "validation_control_like.csv"
+  ],
+  "test_files": [
+    "validation_unseen_freq.csv"
+  ]
+}

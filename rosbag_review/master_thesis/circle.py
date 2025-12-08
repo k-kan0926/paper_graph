@@ -33,7 +33,7 @@ legend_font = {'fontsize': 10}
 # ============================================
 # パラメータ設定
 # ============================================
-BAG_FILE = '/home/kan/Documents/rosbag/20251204/t_circle.bag'
+BAG_FILE = '/home/keiichiro/documents/20251205/T_circle.bag'
 CIRCLE_RADIUS = 0.7  # 円の半径 [m]
 
 # 時間範囲（Noneの場合はis_trackingフラグを使用）
