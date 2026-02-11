@@ -6,31 +6,29 @@ import matplotlib as mpl
 mpl.rcParams.update({
     "pdf.fonttype": 42,
     "ps.fonttype": 42,
-    "text.usetex": False,
-    "mathtext.fontset": "stix", 
+    "text.usetex": False,       # ← 重要（True だとType3の温床）
+    "mathtext.fontset": "stix", # か "cm"
     "pdf.use14corefonts": False,
-    "font.family": "Times New Roman",
+    "font.family": "Times New Roman",  # 日本語混在なら 'IPAexGothic'
 })
 
 # フォント・スタイルの統一
 mpl.rcParams['font.size'] = 16
-mpl.rcParams['font.family'] = 'Times New Roman'
+mpl.rcParams['font.family'] = 'Times New Roman'  # 日本語なら 'IPAPGothic' など
 label_font = {'fontsize': 16, 'fontweight': 'bold'}
 legend_font = {'fontsize': 12}
 
-bag = rosbag.Bag('2026-01-19-21-15-11_battery_flight.bag', 'r')
+bag = rosbag.Bag('t_sta_t_cir_0.5.bag', 'r')
 bag_start = bag.get_start_time()
-start_time = rospy.Time(bag_start + 41.0)
-end_time   = rospy.Time(bag_start + 76.0)
-time_offset = start_time.to_sec()
-
+start_time = rospy.Time(bag_start + 80.0)
+end_time   = rospy.Time(bag_start + 135.0)
 
 # Joint States
 times_js = []
 arm1 = []; arm2 = []; arm3 = []; arm4 = []
-for topic, msg, t in bag.read_messages(topics=['/dragon/joint_states'],
+for topic, msg, t in bag.read_messages(topics=['/kinikun1/joint_states'],
                                        start_time=start_time, end_time=end_time):
-    t_sec = t.to_sec() - time_offset
+    t_sec = t.to_sec() - bag_start
     times_js.append(t_sec)
     if len(msg.position) >= 4:
         arm1.append(msg.position[0])
@@ -38,25 +36,27 @@ for topic, msg, t in bag.read_messages(topics=['/dragon/joint_states'],
         arm3.append(msg.position[2])
         arm4.append(msg.position[3])
 
+# PID
 times_pid = []
 err_x = []; err_y = []; err_z = []
-for topic, msg, t in bag.read_messages(topics=['/dragon/debug/pose/pid'],
+for topic, msg, t in bag.read_messages(topics=['/kinikun1/debug/pose/pid'],
                                        start_time=start_time, end_time=end_time):
-    t_sec = t.to_sec() - time_offset
+    t_sec = t.to_sec() - bag_start
     times_pid.append(t_sec)
     err_x.append(msg.x.err_p)
     err_y.append(msg.y.err_p)
     err_z.append(msg.z.err_p)
 
+# Odometry
 times_odom = []
 roll_vals = []; pitch_vals = []; yaw_vals = []
-for topic, msg, t in bag.read_messages(topics=['/dragon/debug/pose/pid'],
+for topic, msg, t in bag.read_messages(topics=['/kinikun1/uav/baselink/odom'],
                                        start_time=start_time, end_time=end_time):
-    t_sec = t.to_sec() - time_offset
+    t_sec = t.to_sec() - bag_start
     times_odom.append(t_sec)
-    roll_vals.append(msg.roll.err_p)
-    pitch_vals.append(msg.pitch.err_p)
-    yaw_vals.append(msg.yaw.err_p)
+    roll_vals.append(msg.pose.pose.orientation.x)
+    pitch_vals.append(msg.pose.pose.orientation.y)
+    yaw_vals.append(msg.pose.pose.orientation.z)
 
 bag.close()
 
@@ -72,6 +72,7 @@ axes[0].set_ylabel(r'$\theta_i$ [rad]', **label_font)
 axes[0].legend(loc='upper right', **legend_font)
 axes[0].grid(True)
 
+# グラフ②: PID err_p
 axes[1].plot(times_pid, err_x, label='x', color='tab:purple')
 axes[1].plot(times_pid, err_y, label='y', color='tab:brown')
 axes[1].plot(times_pid, err_z, label='z', color='tab:pink')
@@ -79,6 +80,7 @@ axes[1].set_ylabel('Position error [m]', **label_font)
 axes[1].legend(loc='upper right', **legend_font)
 axes[1].grid(True)
 
+# グラフ③: Roll, Pitch, Yaw
 axes[2].plot(times_odom, roll_vals, label='roll', color='tab:gray')
 axes[2].plot(times_odom, pitch_vals, label='pitch', color='tab:olive')
 axes[2].plot(times_odom, yaw_vals, label='yaw', color='tab:cyan')

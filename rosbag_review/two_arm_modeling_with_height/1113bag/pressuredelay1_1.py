@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy import signal
 
-def measure_delay_v2(csv_path, output_dir="delay_analysis_v2"):
+def measure_delay_v2(csv_path, output_dir="delay_analysis_v2_temp"):
     import os
     os.makedirs(output_dir, exist_ok=True)
     
@@ -201,8 +201,7 @@ def measure_delay_v2(csv_path, output_dir="delay_analysis_v2"):
     ax.plot(t[mask_full], p1_cmd[mask_full], 'b-', label='p1_cmd', linewidth=1.5, alpha=0.8)
     ax.plot(t[mask_full], p1_meas[mask_full], 'r-', label='p1_meas', linewidth=1.2)
     ax.axvline(delay_weighted, color='g', linestyle='--', linewidth=2, label=f'delay={delay_weighted*1000:.1f}ms')
-    ax.set_ylabel('Pressure [MPa]')
-    ax.set_title('p1: Overview (first 5s)')
+    ax.set_ylabel('P1 Pressure [MPa]')
     ax.legend()
     ax.grid(True, alpha=0.3)
     
@@ -210,8 +209,7 @@ def measure_delay_v2(csv_path, output_dir="delay_analysis_v2"):
     ax.plot(t[mask_full], p2_cmd[mask_full], 'b-', label='p2_cmd', linewidth=1.5, alpha=0.8)
     ax.plot(t[mask_full], p2_meas[mask_full], 'r-', label='p2_meas', linewidth=1.2)
     ax.axvline(delay_weighted, color='g', linestyle='--', linewidth=2, label=f'delay={delay_weighted*1000:.1f}ms')
-    ax.set_ylabel('Pressure [MPa]')
-    ax.set_title('p2: Overview (first 5s)')
+    ax.set_ylabel('P2 Pressure [MPa]')
     ax.legend()
     ax.grid(True, alpha=0.3)
     
@@ -230,7 +228,6 @@ def measure_delay_v2(csv_path, output_dir="delay_analysis_v2"):
         ax.axvline(step['delay'], color='r', linestyle=':', alpha=0.5, label=f"meas @ {step['delay']*1000:.1f}ms")
         ax.set_xlabel('Time relative to step [s]')
         ax.set_ylabel('Pressure [MPa]')
-        ax.set_title(f'p1: Typical Step (size={step["size"]:.3f} MPa)')
         ax.legend()
         ax.grid(True, alpha=0.3)
     
@@ -248,7 +245,6 @@ def measure_delay_v2(csv_path, output_dir="delay_analysis_v2"):
         ax.axvline(step['delay'], color='r', linestyle=':', alpha=0.5, label=f"{step['delay']*1000:.1f}ms")
         ax.set_xlabel('Time relative to step [s]')
         ax.set_ylabel('Pressure [MPa]')
-        ax.set_title(f'p2: Typical Step (size={step["size"]:.3f} MPa)')
         ax.legend()
         ax.grid(True, alpha=0.3)
     
@@ -261,7 +257,6 @@ def measure_delay_v2(csv_path, output_dir="delay_analysis_v2"):
                    color='r', linestyle='--', linewidth=2, label='median')
         ax.set_xlabel('Delay [ms]')
         ax.set_ylabel('Count')
-        ax.set_title(f'p1: Delay Distribution (n={len(delays_p1)})')
         ax.legend()
         ax.grid(True, alpha=0.3)
     
@@ -273,12 +268,11 @@ def measure_delay_v2(csv_path, output_dir="delay_analysis_v2"):
                    color='r', linestyle='--', linewidth=2, label='median')
         ax.set_xlabel('Delay [ms]')
         ax.set_ylabel('Count')
-        ax.set_title(f'p2: Delay Distribution (n={len(delays_p2)})')
         ax.legend()
         ax.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    plot_path = os.path.join(output_dir, 'pressure_delay_detailed.png')
+    plot_path = os.path.join(output_dir, 'pressure_delay_detailed.pdf')
     plt.savefig(plot_path, dpi=150)
     print(f"[Saved] {plot_path}")
     
